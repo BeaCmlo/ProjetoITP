@@ -1,0 +1,299 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+struct s_sequencia {
+    unsigned int inicio;
+    unsigned int tamanho;
+};
+
+struct s_pessoa {
+    unsigned int id;
+    char nome[16];
+    char sobrenome[32];
+    char email[32];
+    char senha[16];
+};
+
+struct s_biografia {
+    unsigned int id_pessoa;
+    struct s_sequencia texto;  // sem desperdício de memória
+};
+
+struct s_coluna {
+    char nome[32];
+    char tipo[16];
+};
+
+void criarTabela(char *nome_tabela, struct s_coluna *colunas, int num_colunas) {
+    // Validação e criação
+    // ...
+
+    // Exemplo: criando a tabela
+    int tabela_fd = open(nome_tabela, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    
+    // Escreve o número de colunas no início do arquivo
+    write(tabela_fd, &num_colunas, sizeof(int));
+    
+    // Escreve informações sobre cada coluna
+    for (int i = 0; i < num_colunas; ++i) {
+        write(tabela_fd, &colunas[i], sizeof(struct s_coluna));
+    }
+    
+    close(tabela_fd);
+
+    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
+}
+
+
+// Função para inserir uma linha em uma tabela
+int insere_linha(char *arquivo, void *linha, int tamanho) {
+    int tabela_fd = open(arquivo, O_APPEND | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    ssize_t num_bytes = write(tabela_fd, linha, tamanho);
+    close(tabela_fd);
+    return num_bytes;
+}
+
+// Função para inserir uma pessoa na tabela
+int insere_pessoa(struct s_pessoa *pessoa) {
+    // Validação e inserção
+    // ...
+
+    // Exemplo: inserindo na tabela pessoa
+    return insere_linha("tabela_pessoa", pessoa, sizeof(struct s_pessoa));
+}
+
+// Função para inserir uma biografia na tabela
+int insere_biografia(unsigned int id, char *texto) {
+    // Validação e inserção
+    // ...
+
+    // Exemplo: inserindo na tabela biografia
+    int tabela_fd = open("tabela_bio_texto", O_APPEND | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    struct stat tabela_info;
+    fstat(tabela_fd, &tabela_info);
+    int tamanho_tabela = (int)tabela_info.st_size;
+
+    ssize_t num_bytes = write(tabela_fd, texto, strlen(texto));
+    close(tabela_fd);
+
+    struct s_biografia biografia = {id, {tamanho_tabela, num_bytes}};
+    return insere_linha("tabela_biografia", &biografia, sizeof(struct s_biografia));
+}
+
+// Função para abrir uma tabela
+struct s_tabela *abre_tabela(char *arquivo, int tamanho_estrutura) {
+    struct s_tabela *tabela = calloc(1, sizeof(struct s_tabela));
+    tabela->dados = NULL;
+
+    int tabela_fd = open(arquivo, O_RDONLY);
+    struct stat tabela_info;
+    fstat(tabela_fd, &tabela_info);
+
+    tabela->tamanho = (int)tabela_info.st_size;
+    tabela->dados = calloc(tabela->tamanho, 1);
+    tabela->final = tabela->dados + tabela->tamanho;
+
+    ssize_t num_bytes = read(tabela_fd, tabela->dados, tabela->tamanho);
+    tabela->num_linhas = tabela->tamanho / tamanho_estrutura;
+
+    if (num_bytes <= 0)
+        tabela->erro = true;
+    else
+        tabela->erro = false;
+
+    close(tabela_fd);
+    return tabela;
+}
+
+// Função para abrir os bytes de uma tabela
+struct s_linha *abre_bytes(char *arquivo, int tamanho, int inicio) {
+    struct s_linha *linha = calloc(1, sizeof(struct s_linha));
+
+    int tabela_fd = open(arquivo, O_RDONLY);
+    inicio = lseek(tabela_fd, (off_t)inicio, SEEK_SET);
+
+    if (inicio <= 0)
+        linha->erro = true;
+    else
+        linha->erro = false;
+
+    linha->dados = calloc(tamanho, 1);
+
+    ssize_t num_bytes = read(tabela_fd, linha->dados, tamanho);
+
+    if (num_bytes <= 0)
+        linha->erro = true;
+    else
+        linha->erro = false;
+
+    close(tabela_fd);
+
+    return linha;
+}
+
+// Função para abrir uma linha de uma tabela
+struct s_linha *abre_linha(char *arquivo, int tamanho_linha, int posicao) {
+    int inicio = tamanho_linha * posicao;
+    return abre_bytes(arquivo, tamanho_linha, inicio);
+}
+
+// Função para abrir uma biografia
+struct s_linha *abre_biografia(int posicao) {
+    struct s_linha *linha_biografia = abre_linha("tabela_biografias", sizeof(struct s_biografia), posicao);
+    struct s_biografia *biografia = (struct s_biografia *)linha_biografia->dados;
+
+    struct s_linha *texto = abre_bytes("tabela_bio_texto", biografia->texto.tamanho, biografia->texto.inicio);
+
+    return texto;
+}
+
+// Função para adicionar uma pessoa
+void adicionarPessoa() {
+    struct s_pessoa nova_pessoa;
+
+    printf("Digite o ID da pessoa: ");
+    scanf("%u", &nova_pessoa.id);
+
+    printf("Digite o nome da pessoa: ");
+    scanf("%s", nova_pessoa.nome);
+
+    // Preencha os outros campos conforme necessário
+
+    int resultado = insere_pessoa(&nova_pessoa);
+
+    if (resultado > 0) {
+        printf("Pessoa inserida com sucesso!\n");
+    } else {
+        printf("Erro ao inserir pessoa.\n");
+    }
+}
+
+// Função para adicionar uma biografia
+void adicionarBiografia() {
+    unsigned int id;
+    char texto[256];  // Tamanho arbitrário, ajuste conforme necessário
+
+    printf("Digite o ID da pessoa para a biografia: ");
+    scanf("%u", &id);
+
+    printf("Digite o texto da biografia: ");
+    scanf(" %[^\n]s", texto);  // Lê a linha completa, incluindo espaços
+
+    int resultado = insere_biografia(id, texto);
+
+    if (resultado > 0) {
+        printf("Biografia inserida com sucesso!\n");
+    } else {
+        printf("Erro ao inserir biografia.\n");
+    }
+}
+
+// Função para visualizar biografias
+void visualizarBiografias() {
+    struct s_tabela *tabela_biografias = abre_tabela("tabela_biografias", sizeof(struct s_biografia));
+
+    if (tabela_biografias->erro) {
+        printf("Erro ao abrir a tabela de biografias.\n");
+        return;
+    }
+
+    for (int i = 0; i < tabela_biografias->num_linhas; ++i) {
+        struct s_linha *texto_biografia = abre_biografia(i);
+
+        if (!texto_biografia->erro) {
+            printf("Biografia %d:\n%s\n\n", i + 1, (char *)texto_biografia->dados);
+        } else {
+            printf("Erro ao abrir biografia na posição %d.\n", i + 1);
+        }
+
+        free(texto_biografia->dados);
+        free(texto_biografia);
+    }
+
+    free(tabela_biografias->dados);
+    free(tabela_biografias);
+}
+
+// Função para criar uma tabela
+void criarTabela(char *nome_tabela, struct s_coluna *colunas, int num_colunas) {
+    if (num_colunas <= 0 || num_colunas > 32) {
+        printf("Número inválido de colunas.\n");
+        return;
+    }
+
+    for (int i = 0; i < num_colunas; ++i) {
+        if (strlen(colunas[i].nome) <= 0 || strlen(colunas[i].nome) > 32) {
+            printf("Nome da coluna inválido.\n");
+            return;
+        }
+
+        if (strlen(colunas[i].tipo) <= 0 || strlen(colunas[i].tipo) > 16) {
+            printf("Tipo da coluna inválido.\n");
+            return;
+        }
+    }
+
+    // Exemplo: criando a tabela
+    int tabela_fd = open(nome_tabela, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    
+    // Escreve o número de colunas no início do arquivo
+    write(tabela_fd, &num_colunas, sizeof(int));
+    
+    // Escreve informações sobre cada coluna
+    for (int i = 0; i < num_colunas; ++i) {
+        write(tabela_fd, &colunas[i], sizeof(struct s_coluna));
+    }
+    
+    close(tabela_fd);
+
+    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
+}
+
+
+int main(){
+    int opcao;
+
+    do {
+        printf("\nEscolha uma opção:\n");
+        printf("1. Adicionar Pessoa\n");
+        printf("2. Adicionar Biografia\n");
+        printf("3. Visualizar Biografias\n");
+        printf("4. Criar Tabela\n");
+        printf("5. Sair\n");
+
+        printf("Opção: ");
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                adicionarPessoa();
+                break;
+
+            case 2:
+                adicionarBiografia();
+                break;
+
+            case 3:
+                visualizarBiografias();
+                break;
+
+            case 4:
+                criarTabela();
+                break;
+
+            case 5:
+                printf("Saindo do programa.\n");
+                break;
+
+            default:
+                printf("Opção inválida. Tente novamente.\n");
+        }
+    } while (opcao != 5);
+
+    return 0;
+}
