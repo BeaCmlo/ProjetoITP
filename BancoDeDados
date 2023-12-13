@@ -1,289 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
-struct s_sequencia {
-    unsigned int inicio;
-    unsigned int tamanho;
-};
+void criarTabela(char *nome_tabela, char tipos_colunas[][50], int num_colunas);
 
-struct s_pessoa {
-    unsigned int id;
-    char nome[16];
-    char sobrenome[32];
-    char email[32];
-    char senha[16];
-};
+void inserirDados(char *nome_tabela);
 
-struct s_biografia {
-    unsigned int id_pessoa;
-    struct s_sequencia texto;  // sem desperdício de memória
-};
+void consultarTabela(char *nome_tabela);
 
-struct s_coluna {
-    char nome[32];
-    char tipo[16];
-};
+void excluirTabela(char *nome_tabela);
 
-void criarTabela(char *nome_tabela, struct s_coluna *colunas, int num_colunas) {
-    // Validação e criação
-    // ...
-
-    // Exemplo: criando a tabela
-    int tabela_fd = open(nome_tabela, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    
-    // Escreve o número de colunas no início do arquivo
-    write(tabela_fd, &num_colunas, sizeof(int));
-    
-    // Escreve informações sobre cada coluna
-    for (int i = 0; i < num_colunas; ++i) {
-        write(tabela_fd, &colunas[i], sizeof(struct s_coluna));
-    }
-    
-    close(tabela_fd);
-
-    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
-}
-
-
-// Função para inserir uma linha em uma tabela
-int insere_linha(char *arquivo, void *linha, int tamanho) {
-    int tabela_fd = open(arquivo, O_APPEND | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    ssize_t num_bytes = write(tabela_fd, linha, tamanho);
-    close(tabela_fd);
-    return num_bytes;
-}
-
-// Função para inserir uma pessoa na tabela
-int insere_pessoa(struct s_pessoa *pessoa) {
-    // Validação e inserção
-    // ...
-
-    // Exemplo: inserindo na tabela pessoa
-    return insere_linha("tabela_pessoa", pessoa, sizeof(struct s_pessoa));
-}
-
-// Função para inserir uma biografia na tabela
-int insere_biografia(unsigned int id, char *texto) {
-    // Validação e inserção
-    // ...
-
-    // Exemplo: inserindo na tabela biografia
-    int tabela_fd = open("tabela_bio_texto", O_APPEND | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    struct stat tabela_info;
-    fstat(tabela_fd, &tabela_info);
-    int tamanho_tabela = (int)tabela_info.st_size;
-
-    ssize_t num_bytes = write(tabela_fd, texto, strlen(texto));
-    close(tabela_fd);
-
-    struct s_biografia biografia = {id, {tamanho_tabela, num_bytes}};
-    return insere_linha("tabela_biografia", &biografia, sizeof(struct s_biografia));
-}
-
-// Função para abrir uma tabela
-struct s_tabela *abre_tabela(char *arquivo, int tamanho_estrutura) {
-    struct s_tabela *tabela = calloc(1, sizeof(struct s_tabela));
-    tabela->dados = NULL;
-
-    int tabela_fd = open(arquivo, O_RDONLY);
-    struct stat tabela_info;
-    fstat(tabela_fd, &tabela_info);
-
-    tabela->tamanho = (int)tabela_info.st_size;
-    tabela->dados = calloc(tabela->tamanho, 1);
-    tabela->final = tabela->dados + tabela->tamanho;
-
-    ssize_t num_bytes = read(tabela_fd, tabela->dados, tabela->tamanho);
-    tabela->num_linhas = tabela->tamanho / tamanho_estrutura;
-
-    if (num_bytes <= 0)
-        tabela->erro = true;
-    else
-        tabela->erro = false;
-
-    close(tabela_fd);
-    return tabela;
-}
-
-// Função para abrir os bytes de uma tabela
-struct s_linha *abre_bytes(char *arquivo, int tamanho, int inicio) {
-    struct s_linha *linha = calloc(1, sizeof(struct s_linha));
-
-    int tabela_fd = open(arquivo, O_RDONLY);
-    inicio = lseek(tabela_fd, (off_t)inicio, SEEK_SET);
-
-    if (inicio <= 0)
-        linha->erro = true;
-    else
-        linha->erro = false;
-
-    linha->dados = calloc(tamanho, 1);
-
-    ssize_t num_bytes = read(tabela_fd, linha->dados, tamanho);
-
-    if (num_bytes <= 0)
-        linha->erro = true;
-    else
-        linha->erro = false;
-
-    close(tabela_fd);
-
-    return linha;
-}
-
-// Função para abrir uma linha de uma tabela
-struct s_linha *abre_linha(char *arquivo, int tamanho_linha, int posicao) {
-    int inicio = tamanho_linha * posicao;
-    return abre_bytes(arquivo, tamanho_linha, inicio);
-}
-
-// Função para abrir uma biografia
-struct s_linha *abre_biografia(int posicao) {
-    struct s_linha *linha_biografia = abre_linha("tabela_biografias", sizeof(struct s_biografia), posicao);
-    struct s_biografia *biografia = (struct s_biografia *)linha_biografia->dados;
-
-    struct s_linha *texto = abre_bytes("tabela_bio_texto", biografia->texto.tamanho, biografia->texto.inicio);
-
-    return texto;
-}
-
-// Função para adicionar uma pessoa
-void adicionarPessoa() {
-    struct s_pessoa nova_pessoa;
-
-    printf("Digite o ID da pessoa: ");
-    scanf("%u", &nova_pessoa.id);
-
-    printf("Digite o nome da pessoa: ");
-    scanf("%s", nova_pessoa.nome);
-
-    // Preencha os outros campos conforme necessário
-
-    int resultado = insere_pessoa(&nova_pessoa);
-
-    if (resultado > 0) {
-        printf("Pessoa inserida com sucesso!\n");
-    } else {
-        printf("Erro ao inserir pessoa.\n");
-    }
-}
-
-// Função para adicionar uma biografia
-void adicionarBiografia() {
-    unsigned int id;
-    char texto[256];  // Tamanho arbitrário, ajuste conforme necessário
-
-    printf("Digite o ID da pessoa para a biografia: ");
-    scanf("%u", &id);
-
-    printf("Digite o texto da biografia: ");
-    scanf(" %[^\n]s", texto);  // Lê a linha completa, incluindo espaços
-
-    int resultado = insere_biografia(id, texto);
-
-    if (resultado > 0) {
-        printf("Biografia inserida com sucesso!\n");
-    } else {
-        printf("Erro ao inserir biografia.\n");
-    }
-}
-
-// Função para visualizar biografias
-void visualizarBiografias() {
-    struct s_tabela *tabela_biografias = abre_tabela("tabela_biografias", sizeof(struct s_biografia));
-
-    if (tabela_biografias->erro) {
-        printf("Erro ao abrir a tabela de biografias.\n");
-        return;
-    }
-
-    for (int i = 0; i < tabela_biografias->num_linhas; ++i) {
-        struct s_linha *texto_biografia = abre_biografia(i);
-
-        if (!texto_biografia->erro) {
-            printf("Biografia %d:\n%s\n\n", i + 1, (char *)texto_biografia->dados);
-        } else {
-            printf("Erro ao abrir biografia na posição %d.\n", i + 1);
-        }
-
-        free(texto_biografia->dados);
-        free(texto_biografia);
-    }
-
-    free(tabela_biografias->dados);
-    free(tabela_biografias);
-}
-
-// Função para criar uma tabela
-void criarTabela(char *nome_tabela, struct s_coluna *colunas, int num_colunas) {
-    if (num_colunas <= 0 || num_colunas > 32) {
-        printf("Número inválido de colunas.\n");
-        return;
-    }
-
-    for (int i = 0; i < num_colunas; ++i) {
-        if (strlen(colunas[i].nome) <= 0 || strlen(colunas[i].nome) > 32) {
-            printf("Nome da coluna inválido.\n");
-            return;
-        }
-
-        if (strlen(colunas[i].tipo) <= 0 || strlen(colunas[i].tipo) > 16) {
-            printf("Tipo da coluna inválido.\n");
-            return;
-        }
-    }
-
-    // Exemplo: criando a tabela
-    int tabela_fd = open(nome_tabela, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    
-    // Escreve o número de colunas no início do arquivo
-    write(tabela_fd, &num_colunas, sizeof(int));
-    
-    // Escreve informações sobre cada coluna
-    for (int i = 0; i < num_colunas; ++i) {
-        write(tabela_fd, &colunas[i], sizeof(struct s_coluna));
-    }
-    
-    close(tabela_fd);
-
-    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
-}
-
-
-int main(){
+int main() {
     int opcao;
 
     do {
         printf("\nEscolha uma opção:\n");
-        printf("1. Adicionar Pessoa\n");
-        printf("2. Adicionar Biografia\n");
-        printf("3. Visualizar Biografias\n");
-        printf("4. Criar Tabela\n");
+        printf("1. Criar Tabela\n");
+        printf("2. Inserir Dados\n");
+        printf("3. Consultar Tabela\n");
+        printf("4. Excluir Tabela\n");
         printf("5. Sair\n");
 
         printf("Opção: ");
         scanf("%d", &opcao);
+        getchar();
 
         switch (opcao) {
             case 1:
-                adicionarPessoa();
+                {
+                    char nome_tabela[50];
+                    printf("Digite o nome da tabela: ");
+                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
+                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
+
+                    int num_colunas;
+                    printf("Digite o número de colunas: ");
+                    scanf("%d", &num_colunas);
+                    while (getchar() != '\n');
+
+                    char tipos_colunas[num_colunas][50];
+
+                    for (int i = 0; i < num_colunas; ++i) {
+                        printf("Digite o tipo da coluna %d: ", i + 1);
+                        fgets(tipos_colunas[i], sizeof(tipos_colunas[i]), stdin);
+                        tipos_colunas[i][strcspn(tipos_colunas[i], "\n")] = '\0';
+                    }
+
+                    criarTabela(nome_tabela, tipos_colunas, num_colunas);
+                }
                 break;
 
             case 2:
-                adicionarBiografia();
+                {
+                    char nome_tabela[50];
+                    printf("Digite o nome da tabela: ");
+                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
+                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
+
+                    inserirDados(nome_tabela);
+                }
                 break;
 
             case 3:
-                visualizarBiografias();
+                {
+                    char nome_tabela[50];
+                    printf("Digite o nome da tabela: ");
+                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
+                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
+
+                    consultarTabela(nome_tabela);
+                }
                 break;
 
             case 4:
-                criarTabela();
+                {
+                    char nome_tabela[50];
+                    printf("Digite o nome da tabela a ser excluída: ");
+                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
+                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
+
+                    excluirTabela(nome_tabela);
+                }
                 break;
 
             case 5:
@@ -296,4 +94,100 @@ int main(){
     } while (opcao != 5);
 
     return 0;
+}
+
+void criarTabela(char *nome_tabela, char tipos_colunas[][50], int num_colunas) {
+    FILE *arquivo = fopen(nome_tabela, "w");
+
+    if (arquivo == NULL) {
+        fprintf(stderr, "Erro ao abrir o arquivo para escrita.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(arquivo, "%d\n", num_colunas);
+
+    for (int i = 0; i < num_colunas; ++i) {
+        fprintf(arquivo, "%s\n", tipos_colunas[i]);
+    }
+
+    fclose(arquivo);
+
+    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
+}
+
+void inserirDados(char *nome_tabela) {
+    FILE *arquivo = fopen(nome_tabela, "a");
+
+    if (arquivo == NULL) {
+        fprintf(stderr, "Erro ao abrir o arquivo para adição de dados.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char entrada[256];
+    printf("Digite os dados para a tabela (digite 'fim' para encerrar):\n");
+
+    while (1) {
+        printf("Dado: ");
+        fgets(entrada, sizeof(entrada), stdin);
+        entrada[strcspn(entrada, "\n")] = '\0';
+
+        if (strcmp(entrada, "fim") == 0) {
+            break;
+        }
+
+        fprintf(arquivo, "%s\n", entrada);
+    }
+
+    fclose(arquivo);
+
+    printf("Dados inseridos na tabela '%s'.\n", nome_tabela);
+}
+
+void consultarTabela(char *nome_tabela) {
+    FILE *arquivo = fopen(nome_tabela, "r");
+
+    if (arquivo == NULL) {
+        fprintf(stderr, "Erro: a tabela '%s' não existe.\n", nome_tabela);
+        return;
+    }
+
+    int num_colunas;
+    fscanf(arquivo, "%d", &num_colunas);
+    getchar(); 
+
+    printf("Conteúdo da tabela '%s':\n", nome_tabela);
+
+    // Imprimir cabeçalho das colunas
+    for (int i = 0; i < num_colunas; ++i) {
+        char tipo_coluna[50];
+        fscanf(arquivo, "%s", tipo_coluna);
+        printf("%s\t", tipo_coluna);
+    }
+    printf("\n");
+
+    // Imprimir dados da tabela
+    while (!feof(arquivo)) {
+        for (int i = 0; i < num_colunas; ++i) {
+            char dado[256];
+            if (fscanf(arquivo, "%s", dado) != 1) {
+                break;
+            }
+            printf("%s\t", dado);
+        }
+        printf("\n");
+    }
+
+    fclose(arquivo);
+}
+
+void excluirTabela(char *nome_tabela) {
+    if (access(nome_tabela, F_OK) != -1) {
+        if (remove(nome_tabela) == 0) {
+            printf("Tabela '%s' excluída com sucesso!\n", nome_tabela);
+        } else {
+            perror("Erro ao excluir a tabela");
+        }
+    } else {
+        fprintf(stderr, "Erro: a tabela '%s' não existe.\n", nome_tabela);
+    }
 }
