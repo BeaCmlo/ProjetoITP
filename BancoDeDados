@@ -1,193 +1,136 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-void criarTabela(char *nome_tabela, char tipos_colunas[][50], int num_colunas);
+#define MAX_TABLE_NAME 50
+#define MAX_COLUMNS 10
+#define MAX_STRING_LENGTH 256
 
-void inserirDados(char *nome_tabela);
-
-void consultarTabela(char *nome_tabela);
-
-void excluirTabela(char *nome_tabela);
+// Protótipos das funções
+void criarInserirTabela();
+void consultarTabela();
+void excluirTabela();
 
 int main() {
     int opcao;
 
     do {
         printf("\nEscolha uma opção:\n");
-        printf("1. Criar Tabela\n");
-        printf("2. Inserir Dados\n");
-        printf("3. Consultar Tabela\n");
-        printf("4. Excluir Tabela\n");
-        printf("5. Sair\n");
+        printf("1. Criar e Inserir Tabela\n");
+        printf("2. Consultar Tabela\n");
+        printf("3. Excluir Tabela\n");
+        printf("4. Sair\n");
 
         printf("Opção: ");
         scanf("%d", &opcao);
-        getchar();
 
         switch (opcao) {
             case 1:
-                {
-                    char nome_tabela[50];
-                    printf("Digite o nome da tabela: ");
-                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
-                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
-
-                    int num_colunas;
-                    printf("Digite o número de colunas: ");
-                    scanf("%d", &num_colunas);
-                    while (getchar() != '\n');
-
-                    char tipos_colunas[num_colunas][50];
-
-                    for (int i = 0; i < num_colunas; ++i) {
-                        printf("Digite o tipo da coluna %d: ", i + 1);
-                        fgets(tipos_colunas[i], sizeof(tipos_colunas[i]), stdin);
-                        tipos_colunas[i][strcspn(tipos_colunas[i], "\n")] = '\0';
-                    }
-
-                    criarTabela(nome_tabela, tipos_colunas, num_colunas);
-                }
+                criarInserirTabela();
                 break;
 
             case 2:
-                {
-                    char nome_tabela[50];
-                    printf("Digite o nome da tabela: ");
-                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
-                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
-
-                    inserirDados(nome_tabela);
-                }
+                consultarTabela();
                 break;
 
             case 3:
-                {
-                    char nome_tabela[50];
-                    printf("Digite o nome da tabela: ");
-                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
-                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
-
-                    consultarTabela(nome_tabela);
-                }
+                excluirTabela();
                 break;
 
             case 4:
-                {
-                    char nome_tabela[50];
-                    printf("Digite o nome da tabela a ser excluída: ");
-                    fgets(nome_tabela, sizeof(nome_tabela), stdin);
-                    nome_tabela[strcspn(nome_tabela, "\n")] = '\0';
-
-                    excluirTabela(nome_tabela);
-                }
-                break;
-
-            case 5:
                 printf("Saindo do programa.\n");
                 break;
 
             default:
                 printf("Opção inválida. Tente novamente.\n");
         }
-    } while (opcao != 5);
+    } while (opcao != 4);
 
     return 0;
 }
 
-void criarTabela(char *nome_tabela, char tipos_colunas[][50], int num_colunas) {
-    FILE *arquivo = fopen(nome_tabela, "w");
+void criarInserirTabela() {
+    char nome_tabela[MAX_TABLE_NAME];
+    printf("Digite o nome da tabela: ");
+    scanf("%s", nome_tabela);
 
+    FILE *arquivo = fopen(nome_tabela, "w");
     if (arquivo == NULL) {
-        fprintf(stderr, "Erro ao abrir o arquivo para escrita.\n");
-        exit(EXIT_FAILURE);
+        perror("Erro ao criar a tabela");
+        return;
     }
+
+    int num_colunas;
+    printf("Digite o número de colunas (até %d): ", MAX_COLUMNS);
+    scanf("%d", &num_colunas);
 
     fprintf(arquivo, "%d\n", num_colunas);
 
     for (int i = 0; i < num_colunas; ++i) {
-        fprintf(arquivo, "%s\n", tipos_colunas[i]);
+        char nome_coluna[MAX_STRING_LENGTH];
+        printf("Digite o nome da coluna %d: ", i + 1);
+        scanf("%s", nome_coluna);
+        fprintf(arquivo, "%s\t", nome_coluna);
     }
+    fprintf(arquivo, "\n");
 
-    fclose(arquivo);
+    printf("Digite o número de linhas: ");
+    int num_linhas;
+    scanf("%d", &num_linhas);
 
-    printf("Tabela '%s' criada com sucesso!\n", nome_tabela);
-}
-
-void inserirDados(char *nome_tabela) {
-    FILE *arquivo = fopen(nome_tabela, "a");
-
-    if (arquivo == NULL) {
-        fprintf(stderr, "Erro ao abrir o arquivo para adição de dados.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    char entrada[256];
-    printf("Digite os dados para a tabela (digite 'fim' para encerrar):\n");
-
-    while (1) {
-        printf("Dado: ");
-        fgets(entrada, sizeof(entrada), stdin);
-        entrada[strcspn(entrada, "\n")] = '\0';
-
-        if (strcmp(entrada, "fim") == 0) {
-            break;
+    for (int i = 0; i < num_linhas; ++i) {
+        for (int j = 0; j < num_colunas; ++j) {
+            char dado[MAX_STRING_LENGTH];
+            printf("Digite o dado para a coluna %d da linha %d: ", j + 1, i + 1);
+            scanf("%s", dado);
+            fprintf(arquivo, "%s\t", dado);
         }
-
-        fprintf(arquivo, "%s\n", entrada);
+        fprintf(arquivo, "\n");
     }
 
     fclose(arquivo);
-
-    printf("Dados inseridos na tabela '%s'.\n", nome_tabela);
+    printf("Tabela '%s' criada e dados inseridos com sucesso!\n", nome_tabela);
 }
 
-void consultarTabela(char *nome_tabela) {
-    FILE *arquivo = fopen(nome_tabela, "r");
+void consultarTabela() {
+    char nome_tabela[MAX_TABLE_NAME];
+    printf("Digite o nome da tabela: ");
+    scanf("%s", nome_tabela);
 
+    FILE *arquivo = fopen(nome_tabela, "r");
     if (arquivo == NULL) {
-        fprintf(stderr, "Erro: a tabela '%s' não existe.\n", nome_tabela);
+        perror("Erro ao abrir o arquivo para leitura");
         return;
     }
 
     int num_colunas;
     fscanf(arquivo, "%d", &num_colunas);
-    getchar(); 
 
     printf("Conteúdo da tabela '%s':\n", nome_tabela);
 
-    // Imprimir cabeçalho das colunas
     for (int i = 0; i < num_colunas; ++i) {
-        char tipo_coluna[50];
-        fscanf(arquivo, "%s", tipo_coluna);
-        printf("%s\t", tipo_coluna);
+        char nome_coluna[MAX_STRING_LENGTH];
+        fscanf(arquivo, "%s", nome_coluna);
+        printf("%s\t", nome_coluna);
     }
     printf("\n");
 
-    // Imprimir dados da tabela
-    while (!feof(arquivo)) {
-        for (int i = 0; i < num_colunas; ++i) {
-            char dado[256];
-            if (fscanf(arquivo, "%s", dado) != 1) {
-                break;
-            }
-            printf("%s\t", dado);
-        }
-        printf("\n");
+    char entrada[MAX_STRING_LENGTH];
+    while (fscanf(arquivo, "%s", entrada) != EOF) {
+        printf("%s\t", entrada);
     }
 
     fclose(arquivo);
 }
 
-void excluirTabela(char *nome_tabela) {
-    if (access(nome_tabela, F_OK) != -1) {
-        if (remove(nome_tabela) == 0) {
-            printf("Tabela '%s' excluída com sucesso!\n", nome_tabela);
-        } else {
-            perror("Erro ao excluir a tabela");
-        }
+void excluirTabela() {
+    char nome_tabela[MAX_TABLE_NAME];
+    printf("Digite o nome da tabela a ser excluída: ");
+    scanf("%s", nome_tabela);
+
+    if (remove(nome_tabela) == 0) {
+        printf("Tabela '%s' excluída com sucesso!\n", nome_tabela);
     } else {
-        fprintf(stderr, "Erro: a tabela '%s' não existe.\n", nome_tabela);
+        perror("Erro ao excluir a tabela");
     }
 }
