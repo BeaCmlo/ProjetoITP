@@ -111,13 +111,22 @@ void consultarTabela() {
     for (int i = 0; i < num_colunas; ++i) {
         char nome_coluna[MAX_STRING_LENGTH];
         fscanf(arquivo, "%s", nome_coluna);
-        printf("%s\t", nome_coluna);
+        printf("%-15s", nome_coluna); // Adiciona espaçamento fixo para melhor alinhamento
     }
     printf("\n");
 
     char entrada[MAX_STRING_LENGTH];
+    int coluna_atual = 0;
+
     while (fscanf(arquivo, "%s", entrada) != EOF) {
-        printf("%s\t", entrada);
+        printf("%-15s", entrada); // Adiciona espaçamento fixo para melhor alinhamento
+        coluna_atual++;
+
+        if (coluna_atual == num_colunas) {
+            // Adiciona uma quebra de linha após cada linha da tabela
+            printf("\n");
+            coluna_atual = 0; // Reinicia o contador de colunas
+        }
     }
 
     fclose(arquivo);
