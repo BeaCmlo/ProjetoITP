@@ -100,90 +100,108 @@ void criarInserirTabela() {
     fclose(arquivo);
     printf("Tabela '%s' criada e dados inseridos com sucesso!\n", nome_tabela);
 }
-void inserirLinha() {
-    char nome_tabela[MAX_TABLE_NAME];
-    printf("Digite o nome da tabela: ");
-    scanf("%s", nome_tabela);
+void inserirLinha(char *nome_tabela, int linha, int num_colunas, char *nome_colunas[], char separador) {
+    char nome_arquivo[MAX_STRING_LENGTH];
+    sprintf(nome_arquivo, "%s.txt", nome_tabela);
 
-    FILE *arquivo = fopen(nome_tabela, "r+");
+    FILE *arquivo = fopen(nome_arquivo, "a");
     if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo para leitura e escrita");
+        printf("Erro ao abrir o arquivo.\n");
         return;
     }
 
-    int num_colunas, num_linhas;
-    fscanf(arquivo, "%d", &num_colunas);
+    for (int coluna = 0; coluna < num_colunas; coluna++) {
+        char dado[MAX_STRING_LENGTH];
+        printf("Digite o dado da coluna '%s': ", nome_colunas[coluna]);
+        scanf("%s", dado);
 
-    printf("Digite o nÃºmero da linha a ser inserida: ");
-    int linha;
-    scanf("%d", &linha);
-
-    if (linha > num_linhas) {
-        printf("Linha '%d' invÃ¡lida!\n", linha);
-        fclose(arquivo);
-        return;
+        fprintf(arquivo, "%s", dado);
+        if (coluna < num_colunas - 1) {
+            fprintf(arquivo, "%c", separador);
+        }
     }
-
-    // Avança o cursor para a posição desejada (linha)
-    fseek(arquivo, (linha - 1) * (num_colunas + 1) * MAX_STRING_LENGTH, SEEK_CUR);
-
-    // Lê a linha existente
-    char linha_existente[MAX_STRING_LENGTH * (num_colunas + 1)];
-    fgets(linha_existente, MAX_STRING_LENGTH * (num_colunas + 1), arquivo);
-
-    // Lê a nova linha do usuário
-    char nova_linha[MAX_STRING_LENGTH * (num_colunas + 1)];
-    printf("Digite a nova linha: ");
-    scanf("%s", nova_linha);
-
-    // Escreve a nova linha no arquivo
-    fseek(arquivo, -(num_colunas + 1) * MAX_STRING_LENGTH, SEEK_CUR);
-    fputs(nova_linha, arquivo);
-
-    printf("Linha '%d' inserida com sucesso!\n", linha);
+    fprintf(arquivo, "\n");
 
     fclose(arquivo);
 }
 
-void consultarTabela() {
-    char nome_tabela[MAX_TABLE_NAME];
-    printf("Digite o nome da tabela: ");
-    scanf("%s", nome_tabela);
+void listarTabelas() {
+    // Listar todas as tabelas no diretório atual
+    // (Você pode precisar de uma biblioteca ou API específica para listar arquivos)
 
-    FILE *arquivo = fopen(nome_tabela, "r");
+    // Aqui, vou simular a existência de algumas tabelas
+    wprintf(L"Tabelas disponíveis:\n");
+    wprintf(L"1. tabela1\n");
+    wprintf(L"2. tabela2\n");
+    wprintf(L"3. tabela3\n");
+}
+
+void consultarTabela() {
+    wchar_t nome_tabela[MAX_TABLE_NAME];
+    int escolha;
+
+    // Listar as tabelas disponíveis
+    listarTabelas();
+
+    // Solicitar ao usuário que escolha uma tabela
+    wprintf(L"Escolha o número da tabela que deseja consultar: ");
+    wscanf(L"%d", &escolha);
+
+    // Mapear a escolha do usuário para o nome da tabela (simulado aqui)
+    switch (escolha) {
+        case 1:
+            wcscpy(nome_tabela, L"tabela1");
+            break;
+
+        case 2:
+            wcscpy(nome_tabela, L"tabela2");
+            break;
+
+        case 3:
+            wcscpy(nome_tabela, L"tabela3");
+            break;
+
+        default:
+            wprintf(L"Opção inválida.\n");
+            return;
+    }
+
+    FILE *arquivo = _wfopen(nome_tabela, L"r, ccs=UTF-8");
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo para leitura");
         return;
     }
 
     int num_colunas;
-    fscanf(arquivo, "%d", &num_colunas);
+    fwscanf(arquivo, L"%d", &num_colunas);
 
-    printf("ConteÃºdo da tabela '%s':\n", nome_tabela);
+    wprintf(L"Conteúdo da tabela '%ls':\n", nome_tabela);
 
     for (int i = 0; i < num_colunas; ++i) {
-        char nome_coluna[MAX_STRING_LENGTH];
-        fscanf(arquivo, "%s", nome_coluna);
-        printf("%-15s", nome_coluna); // Adiciona espaÃ§amento fixo para melhor alinhamento
+        wchar_t nome_coluna[MAX_STRING_LENGTH];
+        fwscanf(arquivo, L"%ls", nome_coluna);
+        wprintf(L"%-15ls", nome_coluna); // Adiciona espaçamento fixo para melhor alinhamento
     }
-    printf("\n");
+    wprintf(L"\n");
 
-    char entrada[MAX_STRING_LENGTH];
+    wchar_t entrada[MAX_STRING_LENGTH];
     int coluna_atual = 0;
 
-    while (fscanf(arquivo, "%s", entrada) != EOF) {
-        printf("%-15s", entrada); // Adiciona espaÃ§amento fixo para melhor alinhamento
+    while (fwscanf(arquivo, L"%ls", entrada) != EOF) {
+        wprintf(L"%-15ls", entrada); // Adiciona espaçamento fixo para melhor alinhamento
         coluna_atual++;
 
         if (coluna_atual == num_colunas) {
-            // Adiciona uma quebra de linha apÃ³s cada linha da tabela
-            printf("\n");
+            // Adiciona uma quebra de linha após cada linha da tabela
+            wprintf(L"\n");
             coluna_atual = 0; // Reinicia o contador de colunas
         }
     }
 
     fclose(arquivo);
 }
+
+
 void consultarDados() {
     char nome_tabela[MAX_TABLE_NAME];
     printf("Digite o nome da tabela: ");
@@ -197,6 +215,7 @@ void consultarDados() {
 
     int num_colunas, num_linhas;
     fscanf(arquivo, "%d", &num_colunas);
+    fscanf(arquivo, "%d", &num_linhas);
 
     char nome_coluna[MAX_STRING_LENGTH];
     printf("Digite o nome da coluna cujos dados serão consultados: ");
@@ -219,19 +238,31 @@ void consultarDados() {
         return;
     }
 
-    printf("Digite o nÃºmero da linha cujos dados serão consultados: ");
-    int linha;
-    scanf("%d", &linha);
+    printf("Digite o nÃºmero inicial da linha cujos dados serão consultados: ");
+    int linha_inicial;
+    scanf("%d", &linha_inicial);
 
-    // Avança o cursor para a posição desejada (coluna e linha)
-    int posicao_final = (linha - 1) * (num_colunas + 1) + coluna_atual;
-    fseek(arquivo, posicao_final * MAX_STRING_LENGTH, SEEK_CUR);
+    printf("Digite o nÃºmero final da linha cujos dados serão consultados: ");
+    int linha_final;
+    scanf("%d", &linha_final);
 
-    // Lê o dado na posição especificada
-    char dado[MAX_STRING_LENGTH];
-    fscanf(arquivo, "%s", dado);
+    if (linha_inicial < 1 || linha_inicial > num_linhas || linha_final < 1 || linha_final > num_linhas) {
+        printf("Erro: o nÃºmero da linha inserido Ã© invÃ¡lido.\n");
+        fclose(arquivo);
+        return;
+    }
 
-    printf("O dado na linha %d e coluna '%s' Ã©: %s\n", linha, nome_coluna, dado);
+    // Percorre as linhas especificadas e imprime o dado na coluna especificada
+    for (int linha = linha_inicial; linha <= linha_final; linha++) {
+        int posicao_final = (linha - 1) * (num_colunas + 1) + coluna_atual;
+        fseek(arquivo, posicao_final * MAX_STRING_LENGTH, SEEK_CUR);
+
+        // Lê o dado na posição especificada
+        char dado[MAX_STRING_LENGTH];
+        fscanf(arquivo, "%s", dado);
+
+        printf("O dado na linha %d e coluna '%s' Ã©: %s\n", linha, nome_coluna, dado);
+    }
 
     fclose(arquivo);
 }
@@ -241,9 +272,13 @@ void excluirTabela() {
     printf("Digite o nome da tabela a ser excluÃ­da: ");
     scanf("%s", nome_tabela);
 
-    if (remove(nome_tabela) == 0) {
-        printf("Tabela '%s' excluÃ­da com sucesso!\n", nome_tabela);
+    if (access(nome_tabela, F_OK) == 0) {
+        if (remove(nome_tabela) == 0) {
+            printf("Tabela '%s' excluÃ­da com sucesso!\n", nome_tabela);
+        } else {
+            perror("Erro ao excluir a tabela");
+        }
     } else {
-        perror("Erro ao excluir a tabela");
+        printf("Erro: Tabela '%s' nÃ£o encontrada.\n", nome_tabela);
     }
 }
